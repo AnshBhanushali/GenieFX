@@ -1,5 +1,3 @@
-# backend/inference/video_processor.py
-
 import os
 import uuid
 import cv2
@@ -9,21 +7,12 @@ import numpy as np
 from typing import Optional, Tuple
 from typing import List
 
-# If you have RIFE or other interpolation libraries installed, import them here
-# Example: from inference.rife_inference import RIFEModel
 
 from diffusers import StableDiffusionImg2ImgPipeline
 from PIL import Image
 
 class VideoProcessor:
-    """
-    A helper class to handle:
-      1. Extracting frames from a video
-      2. (Optionally) interpolating frames (RIFE or other)
-      3. Processing frames with Stable Diffusion (img2img)
-      4. Reassembling frames into a new video
-      5. Cleanup / temporary folder management
-    """
+
     def __init__(
         self,
         sd_model_id: str = "runwayml/stable-diffusion-v1-5",
