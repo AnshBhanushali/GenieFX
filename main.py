@@ -39,3 +39,34 @@ def text_to_image(prompt: TextPrompt):
     task = process_text_to_image_task.delay(prompt.prompt)
     return {"task_id": task.id}
 
+@app.post("/image-edit")
+def image_edit(
+    prompt: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """
+    Kick off a Celery task for image editing.
+    """
+    # Save the uploaded image temporarily
+    input_file_path = f"temp_{uuid.uuid4()}.png"
+    with open(input_file_path, "wb") as f:
+        f.write(file.file.read())
+
+    task = process_image_edit_task.delay(prompt, input_file_path)
+    return {"task_id": task.id}
+
+@app.post("/video-edit")
+def video_edit(
+    prompt: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """
+    Kick off a Celery task for video editing.
+    """
+    input_file_path = f"temp_{uuid.uuid4()}.mp4"
+    with open(input_file_path, "wb") as f:
+        f.write(file.file.read())
+
+    task = process_video_edit_task.delay(prompt, input_file_path)
+    return {"task_id": task.id}
+
