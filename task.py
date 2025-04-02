@@ -9,3 +9,15 @@ celery_app = Celery(
     broker=os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"),
     backend=os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0"),
 )
+
+@celery_app.task(name="process_text_to_image_task")
+def process_text_to_image_task(prompt: str):
+    # Generate the image
+    output_path = generate_image_from_prompt(prompt)
+    return {"output_path": output_path}
+
+@celery_app.task(name="process_image_edit_task")
+def process_image_edit_task(prompt: str, input_file_path: str):
+    output_path = edit_image_with_prompt(input_file_path, prompt)
+    # Clean up input file if needed
+    return {"output_path": output_path}
