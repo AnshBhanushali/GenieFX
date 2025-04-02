@@ -1,4 +1,3 @@
-
 import uuid
 import os
 import logging
@@ -8,6 +7,7 @@ from PIL import Image
 from .global_diffusion_pipelines import load_text2img_pipeline, load_img2img_pipeline
 
 logger = logging.getLogger(__name__)
+
 
 def generate_image_from_prompt(prompt: str, output_dir: str = ".", **kwargs) -> str:
     """
@@ -77,7 +77,6 @@ def edit_video_with_prompt(input_video_path: str, prompt: str, output_dir: str =
 
     logger.info(f"Editing video {input_video_path} with prompt: {prompt}")
 
-    # 1. Extract frames
     cap = cv2.VideoCapture(input_video_path)
     if not cap.isOpened():
         raise IOError(f"Could not open video file {input_video_path}")
@@ -100,6 +99,8 @@ def edit_video_with_prompt(input_video_path: str, prompt: str, output_dir: str =
     edited_frame_paths = []
     for fp in frame_paths:
         frame_img = cv2.imread(fp)
+        if frame_img is None:
+            continue
         frame_img_rgb = cv2.cvtColor(frame_img, cv2.COLOR_BGR2RGB)
         init_pil = Image.fromarray(frame_img_rgb)
 
@@ -122,7 +123,8 @@ def edit_video_with_prompt(input_video_path: str, prompt: str, output_dir: str =
 
     for edited_fp in edited_frame_paths:
         frame_img = cv2.imread(edited_fp)
-        out.write(frame_img)
+        if frame_img is not None:
+            out.write(frame_img)
     out.release()
 
     logger.info(f"Edited video saved to {output_video_path}")

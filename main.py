@@ -1,43 +1,68 @@
+# main.py
+
 import os
 import uuid
 import logging
 import shutil
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+from celery import Celery
+import os
 
+# Celery
 from celery import Celery
 
-# 1. Import the scraper and Celery tasks
-from backend.scraping.scraper import scrape_images_from_url
-from backend.tasks import (
+# Scraping function
+from scraper import scrape_images_from_url
+
+# Celery tasks for text2img, image edit, video edit
+from task import (
     process_text_to_image_task,
     process_image_edit_task,
     process_video_edit_task
 )
 
-# 2. Configure logging (adjust level as needed)
+# Optional: If you want to serve static files (images/videos) from the backend
+# from fastapi.staticfiles import StaticFiles
+# app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 3. Create a directory for temporary files
-TEMP_DIR = "temp_uploads"
-os.makedirs(TEMP_DIR, exist_ok=True)
-
-# 4. Initialize FastAPI
+# Create FastAPI app
 app = FastAPI(
     title="AI Media Generation & Editing API",
-    description="Endpoints for image/video generation/editing",
+    description="Endpoints for image/video generation/editing with Celery tasks",
     version="1.0.0",
 )
 
-# 5. Initialize Celery (same broker and backend as tasks.py)
-celery_app = Celery(
-    "tasks",
-    broker=os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"),
-    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0"),
+# Enable CORS so frontend at localhost:3000 can reach this API
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+    # Add your production domain here if deployed
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+# Create a temporary uploads folder
+TEMP_DIR = "temp_uploads"
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+celery_app = Celery(
+    "task",
+    broker="memory://",
+    backend="rpc://",
+)
+
 
 
 class TextPrompt(BaseModel):
@@ -151,5 +176,4 @@ def get_result(task_id: str):
 
 
 if __name__ == "__main__":
-    # Run the server with auto-reload for development
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

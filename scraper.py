@@ -1,10 +1,9 @@
-# backend/scraping/tasks.py
+# scraping/tasks.py
 
 import logging
 from celery import Celery
 from typing import Dict, List
 
-from backend.scraping.scraper import scrape_images_from_url
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +24,10 @@ def scrape_images_task(self, url: str, timeout: int = 10) -> Dict[str, List[str]
     """
     try:
         logger.info(f"Scraping images from URL: {url}")
-        images = scrape_images_from_url(url, timeout=timeout)
-        return {"images": images}
     except Exception as exc:
         logger.error(f"Error scraping {url}: {exc}")
         self.retry(exc=exc)
+
+def scrape_images_from_url(url: str):
+    # Dummy placeholder for now
+    return ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
