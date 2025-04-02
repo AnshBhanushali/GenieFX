@@ -1,5 +1,3 @@
-# backend/main.py
-
 import os
 import uuid
 import logging
