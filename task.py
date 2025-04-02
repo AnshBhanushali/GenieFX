@@ -21,3 +21,9 @@ def process_image_edit_task(prompt: str, input_file_path: str):
     output_path = edit_image_with_prompt(input_file_path, prompt)
     # Clean up input file if needed
     return {"output_path": output_path}
+
+@celery_app.task(name="process_video_edit_task")
+def process_video_edit_task(prompt: str, input_file_path: str):
+    output_video_path = edit_video_with_prompt(input_file_path, prompt)
+    # Clean up input file if needed
+    return {"output_path": output_video_path}
