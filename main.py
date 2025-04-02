@@ -18,3 +18,24 @@ celery_app = Celery(
     broker=os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"),
     backend=os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0"),
 )
+
+class TextPrompt(BaseModel):
+    prompt: str
+
+@app.post("/scrape_images")
+def scrape_images(url: str):
+    """
+    Example endpoint to scrape images from a URL.
+    """
+    image_links = scrape_images_from_url(url)
+    return {"images_found": image_links}
+
+@app.post("/text-to-image")
+def text_to_image(prompt: TextPrompt):
+    """
+    Kick off a Celery task for text-to-image generation.
+    Returns a task_id that client can poll for result.
+    """
+    task = process_text_to_image_task.delay(prompt.prompt)
+    return {"task_id": task.id}
+
