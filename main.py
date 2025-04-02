@@ -70,3 +70,22 @@ def video_edit(
     task = process_video_edit_task.delay(prompt, input_file_path)
     return {"task_id": task.id}
 
+@app.get("/result/{task_id}")
+def get_result(task_id: str):
+    """
+    Polling endpoint. Retrieves the status/result of a Celery task.
+    """
+    task_result = celery_app.AsyncResult(task_id)
+    if task_result.state == "PENDING":
+        return {"status": "PENDING"}
+    elif task_result.state == "STARTED":
+        return {"status": "STARTED"}
+    elif task_result.state == "SUCCESS":
+        return {"status": "SUCCESS", "result": task_result.result}
+    elif task_result.state == "FAILURE":
+        return {"status": "FAILURE", "error": str(task_result.result)}
+    return {"status": "UNKNOWN"}
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
