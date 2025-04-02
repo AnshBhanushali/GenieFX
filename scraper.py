@@ -1,52 +1,32 @@
+# backend/scraping/tasks.py
+
 import logging
-import requests
-from requests.exceptions import RequestException, Timeout
-from bs4 import BeautifulSoup
-from typing import List
+from celery import Celery
+from typing import Dict, List
+
+from backend.scraping.scraper import scrape_images_from_url
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/58.0.3029.110 Safari/537.3"
-    )
-}
+celery_app = Celery(
+    "scraper_tasks",
+    broker="redis://redis:6379/0",
+    backend="redis://redis:6379/0",
+)
 
-def scrape_images_from_url(url: str, timeout: int = 10) -> List[str]:
+@celery_app.task(name="scrape_images_task", bind=True, max_retries=3, default_retry_delay=60)
+def scrape_images_task(self, url: str, timeout: int = 10) -> Dict[str, List[str]]:
     """
-    Fetches the HTML of a page and extracts <img> tags with absolute URLs.
-    For robust/dynamic scraping, consider using Selenium, Scrapy, or Playwright.
+    Celery task that scrapes a given URL for image URLs.
 
-    :param url: The target URL to scrape.
-    :param timeout: How long (in seconds) to wait for the server to send data.
-    :return: A list of image URLs found in <img> tags.
+    :param url: The URL to scrape.
+    :param timeout: Request timeout in seconds.
+    :return: Dictionary containing the list of image URLs found.
     """
-    image_links = []
-    with requests.Session() as session:
-        session.headers.update(DEFAULT_HEADERS)
-        try:
-            logger.info(f"Requesting URL: {url}")
-            response = session.get(url, timeout=timeout)
-            response.raise_for_status()  # raise HTTPError for bad responses
-        except (RequestException, Timeout) as e:
-            logger.error(f"Request failed for {url}: {e}")
-            return image_links  # return empty list on failure
-
-    # If request is successful, parse the HTML
-    soup = BeautifulSoup(response.text, "html.parser")
-    img_tags = soup.find_all("img")
-
-    for tag in img_tags:
-        src = tag.get("src")
-        if not src:
-            continue
-
-        if src.startswith("//"):
-            src = f"https:{src}"
-        if src.startswith("http://") or src.startswith("https://"):
-            image_links.append(src)
-
-    logger.info(f"Found {len(image_links)} image URLs in {url}")
-    return image_links
+    try:
+        logger.info(f"Scraping images from URL: {url}")
+        images = scrape_images_from_url(url, timeout=timeout)
+        return {"images": images}
+    except Exception as exc:
+        logger.error(f"Error scraping {url}: {exc}")
+        self.retry(exc=exc)
